@@ -158,6 +158,9 @@
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksBelow</enum>
+         </property>
         </widget>
         <widget class="QPushButton" name="pb_Test">
          <property name="geometry">
@@ -184,6 +187,9 @@
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksBelow</enum>
+         </property>
         </widget>
         <widget class="QSlider" name="sl_pwm2">
          <property name="geometry">
@@ -196,6 +202,9 @@
          </property>
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksBelow</enum>
          </property>
         </widget>
         <widget class="QLineEdit" name="edit_duty2">

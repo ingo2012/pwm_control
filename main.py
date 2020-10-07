@@ -3,7 +3,7 @@
 
 """
 pip3 freeze > requirements.txt
-
+https://protosupplies.com/product/xy-lpwm-pwm-signal-generator-module/
 
 Qt Grafik
 https://likegeeks.com/pyqt5-drawing-tutorial/
@@ -16,8 +16,10 @@ pyuic5 -o main_win.py main_win.ui
 """
 
 import sys
-import random
+#import random
+import re
 import serial
+import time
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5 import QtCore, QtGui , QtWidgets
 from PyQt5.QtWidgets import *
@@ -46,32 +48,139 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.locked = False
         self.usbConnect = False
         self.serial = None
+        self.sliderDrag = False
         # Defaults
         self.d1Duty = 50
         self.d2Duty = 50
         self.d3Duty = 50
-        self.frequency   = 800
+        self.frequency = 800
+        self.freqDivider = 1
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.centerOnScreen()
         self.setStyleSheet("QStatusBar{padding-left:8px;color:blue;font-weight:normal;}")
         self.statusBar().showMessage('Ready')
         self.uiSetup()
+        self.timer = QtCore.QTimer()
+        # read from usb , interval 2 seconds
+        self.timer.start(500.0)
         self.createConnects()
         self.connectUsb()
         self.readUsb()
     # enddef
 
-    def readUsb(self):
+    def stopSlider(self):
+        self.sliderDrag = True
+        self.statusBar().showMessage("Reading disabled !")
+
+    def stopEdit(self):
+        self.sliderDrag = True
+        self.statusBar().showMessage("Reading disabled !")
+
+    def enableSliderD1(self):
+        # Read Values and set the device
         if self.usbConnect:
-            h = self.serial.write("read".encode())  # read current Values
+            myTemp = self.ui.sl_pwm1.value()
+            myStr = "D1:{:03d}".format(myTemp)
+            self.writeUsb(myStr)
+            if self.locked:
+                self.statusBar().showMessage("Setting channels")
+                time.sleep(0.5)
+                myStr = "D2:{:03d}".format(myTemp)
+                self.writeUsb(myStr)
+                time.sleep(0.5)
+                myStr = "D3:{:03d}".format(myTemp)
+                self.writeUsb(myStr)
+                time.sleep(0.5)
+            self.sliderDrag = False
+
+
+    def enableSliderD2(self):
+        # Read Values and set the device
+        if self.usbConnect:
+            myTemp = self.ui.sl_pwm2.value()
+            myStr = "D2:{:03d}".format(myTemp)
+            self.writeUsb(myStr)
+            self.sliderDrag = False
+
+    def enableSliderD3(self):
+        # Read Values and set the device
+        if self.usbConnect:
+            myTemp = self.ui.sl_pwm3.value()
+            myStr = "D3:{:03d}".format(myTemp)
+            self.writeUsb(myStr)
+            self.sliderDrag = False
+
+    def writeUsb(self,value):
+        self.serial.write(value.encode())  # set current Value
+        self.serial.flush()
+
+    def readUsb(self):
+        if self.usbConnect and self.sliderDrag==False:
+            self.serial.write("read".encode())  # read current Values
             self.serial.flush()  # it is buffering. required to get the data out *now*
             readBytes = self.serial.readline().decode(encoding='UTF-8')
-            print(readBytes)
+            # print(readBytes)
             if len(readBytes.split(','))==5:
-                print("Freq=",readBytes.split(',')[0])
-                print("D1= ",readBytes.split(',')[1])
-                #self.d1Duty = int(readBytes.split(',')[1].split(':'))
+                self.statusBar().showMessage("Ok: Read "+readBytes)
+                m = re.search('F(\d+?\.?\d+?.?\d+),D1:(\d+),D2:(\d+),D3:(\d+)', readBytes.rstrip())
+                tempFreq = m.group(1)
+                decCounter = tempFreq.count('.')
+                freqArray = tempFreq.split(".")
+                print("freqArr ",freqArray)
+                if decCounter==0:
+                    self.frequency = int(tempFreq)
+                    # 1 Hz Control aktiv
+                    self.ui.f1Button.setChecked(True)
+                    self.ui.freqSlider.setMinimum(1)
+                    self.ui.freqSlider.setMaximum(999)
+                    self.ui.freqSlider.setSingleStep(1)
+                    self.freqDivider = 1
+                elif decCounter==1 and int(freqArray[0])<10:
+                    self.frequency = int(freqArray[0])*1000 + int(freqArray[1])*10
+                    # 10 Hz Control aktiv
+                    self.ui.f10Button.setChecked(True)
+                    self.ui.freqSlider.setMinimum(1000)
+                    self.ui.freqSlider.setMaximum(9990)
+                    self.ui.freqSlider.setSingleStep(10)
+                    self.ui.freqSlider.setPageStep(10)
+                    self.freqDivider = 10
+                elif decCounter == 1 and int(freqArray[0]) > 9:
+                    self.frequency = int(freqArray[0]) * 1000 + int(freqArray[1]) * 100
+                    # 100 Hz Control aktiv
+                    self.ui.f100Button.setChecked(True)
+                    self.ui.freqSlider.setMinimum(10000)
+                    self.ui.freqSlider.setMaximum(99900)
+                    self.ui.freqSlider.setSingleStep(100)
+                    self.ui.freqSlider.setPageStep(100)
+                    self.freqDivider = 100
+                elif decCounter == 2:
+                    self.frequency = int(freqArray[0]) * 100000 + int(freqArray[1]) * 10000 + int(freqArray[2]) * 1000
+                    # 1000 Hz Control aktiv
+                    self.ui.f1000Button.setChecked(True)
+                    self.ui.freqSlider.setMinimum(100000)
+                    self.ui.freqSlider.setMaximum(150000)
+                    self.ui.freqSlider.setSingleStep(1000)
+                    self.ui.freqSlider.setPageStep(1000)
+                    self.freqDivider = 1000
+                # wenn decCounter = 1 und Array0 > 9 , dann 100er aktive , 11.3 = 11300 Hz , evtl. Darstellung anpassen
+                print("Group1 Freq",tempFreq ," Counter ",decCounter)
+                self.d1Duty = int(m.group(2))
+                self.d2Duty = int(m.group(3))
+                self.d3Duty = int(m.group(4))
+                self.updateDutyValues()
+            else:
+                self.statusBar().showMessage("Error: Read unexpected String "+readBytes)
+
+    def updateDutyValues(self):
+        self.ui.edit_duty1.setText(str(self.d1Duty))
+        self.update_duty1()
+        self.ui.edit_duty2.setText(str(self.d2Duty))
+        self.update_duty2()
+        self.ui.edit_duty3.setText(str(self.d3Duty))
+        self.update_duty3()
+        self.ui.edit_freq.setText(str((self.frequency)))
+        self.update_freq()
 
     def connectUsb(self):
         try:
@@ -109,8 +218,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.edit_freq.setText(str(value))
 
     def update_freq(self):
-        value = self.getEditValue(self.ui.edit_freq)
-        self.ui.freqSlider.setValue(value)
+        value = self.ui.edit_freq.text()
+        self.ui.freqSlider.setValue(int(value))
 
     def lockClicked(self):
         radioBtn = self.sender()
@@ -173,6 +282,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         else:
             self.plot(self.ui.pwm1View, (value / 100), 1)
 
+
+
     def update_duty2_sl(self,value):
         self.ui.edit_duty2.setText(str(value))
         self.plot(self.ui.pwm2View, (value/100), 1)
@@ -225,15 +336,18 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.edit_freq.returnPressed.connect(self.update_freq)
         self.ui.lockButton.toggled.connect(self.lockClicked)
         self.ui.comboBox.currentIndexChanged.connect(self.connectUsb)
-        # Gibt aktuelle Zelle aus
-        #QtCore.QObject.connect(self.ui.pdfTable, QtCore.SIGNAL("clicked(QModelIndex)"), self.cellClicked)
-        #QtCore.QObject.connect(self.ui.pdfTable, QtCore.SIGNAL("doubleClicked(QModelIndex)"), self.dblcellClicked)
-        ## Import eines PDF
-        #self.ui.actionImportOnePDF.activated.connect(self.importOnePDF)
-        ## Import PDF-Directory
-        #self.ui.actionImportPDFDir.activated.connect(self.importPDFDir)
-        #self.ui.actionImport_PDF_List.activated.connect(self.importPDFList)
-
+        self.timer.timeout.connect(self.readUsb)
+        # Lock reading when slider moved
+        self.ui.sl_pwm1.sliderPressed.connect(self.stopSlider)
+        self.ui.sl_pwm1.sliderReleased.connect(self.enableSliderD1)
+        self.ui.sl_pwm2.sliderPressed.connect(self.stopSlider)
+        self.ui.sl_pwm2.sliderReleased.connect(self.enableSliderD2)
+        self.ui.sl_pwm3.sliderPressed.connect(self.stopSlider)
+        self.ui.sl_pwm3.sliderReleased.connect(self.enableSliderD3)
+        #self.ui.freqSlider.sliderPressed.connect(self.stopSlider)
+        #self.ui.freqSlider.sliderReleased.connect(self.enableSlider)
+        # Lock when focusIn editLine
+        self.ui.edit_duty1.selectionChanged.connect(self.stopEdit)
     # enddef
 
     def centerOnScreen (self):
