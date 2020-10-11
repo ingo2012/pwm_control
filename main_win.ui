@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1074</width>
-    <height>734</height>
+    <width>1076</width>
+    <height>749</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -418,6 +418,19 @@
           <string>Hz</string>
          </property>
         </widget>
+        <widget class="QPushButton" name="setButton">
+         <property name="geometry">
+          <rect>
+           <x>470</x>
+           <y>90</y>
+           <width>41</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Set</string>
+         </property>
+        </widget>
        </widget>
       </item>
      </layout>
@@ -429,7 +442,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1074</width>
+     <width>1076</width>
      <height>28</height>
     </rect>
    </property>
@@ -465,6 +478,24 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>edit_freq</tabstop>
+  <tabstop>edit_duty1</tabstop>
+  <tabstop>edit_duty2</tabstop>
+  <tabstop>edit_duty3</tabstop>
+  <tabstop>setButton</tabstop>
+  <tabstop>lockButton</tabstop>
+  <tabstop>sl_pwm3</tabstop>
+  <tabstop>comboBox</tabstop>
+  <tabstop>f1Button</tabstop>
+  <tabstop>pb_Test</tabstop>
+  <tabstop>f10Button</tabstop>
+  <tabstop>f100Button</tabstop>
+  <tabstop>f1000Button</tabstop>
+  <tabstop>freqSlider</tabstop>
+  <tabstop>sl_pwm1</tabstop>
+  <tabstop>sl_pwm2</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

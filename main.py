@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
+pwm_control 1.0  , IGE 11.10.2020
+
 pip3 freeze > requirements.txt
 https://protosupplies.com/product/xy-lpwm-pwm-signal-generator-module/
 
@@ -16,14 +18,12 @@ pyuic5 -o main_win.py main_win.ui
 """
 
 import sys
-#import random
 import re
 import serial
 import time
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5 import QtCore, QtGui , QtWidgets
 from PyQt5.QtWidgets import *
-#from PyQt5.QtGui import *
 from PyQt5 import *
 from PyQt5.QtGui import QPainter, QColor, QPen, qRgb
 from PyQt5.QtGui import QIcon
@@ -35,8 +35,6 @@ from scipy import signal
 # https://pyqtgraph.readthedocs.io/en/latest/
 from pyqtgraph import PlotWidget
 import pyqtgraph as pg
-
-
 from main_win import Ui_MainWindow
 
 
@@ -44,7 +42,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, *args):
         QtWidgets.QMainWindow.__init__(self, *args)
-        self.debug = True
+        self.debug = False
         self.locked = False
         self.usbConnect = False
         self.serial = None
@@ -69,20 +67,68 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.readUsb()
     # enddef
 
+    def setNewValues(self):
+        self.ui.setButton.setEnabled(False)
+        self.enableSliderFreq(drag=True)
+        time.sleep(2.0)
+        self.enableSliderD1(drag=True)
+        time.sleep(1.0)
+        self.enableSliderD2(drag=True)
+        time.sleep(1.0)
+        self.enableSliderD3(drag=True)
+        time.sleep(1.0)
+        self.sliderDrag = False
+
     def stopSlider(self):
         self.sliderDrag = True
         self.statusBar().showMessage("Reading disabled !")
 
     def stopEdit(self):
         self.sliderDrag = True
-        self.statusBar().showMessage("Reading disabled !")
+        self.ui.setButton.setEnabled(True)
+        self.ui.freqSlider.setMinimum(0)
+        self.ui.freqSlider.setMaximum(150000)
+        self.ui.freqSlider.setSingleStep(1)
+        self.statusBar().showMessage("Reading disabled ! Press Set to set new values")
 
-    def enableSliderD1(self):
+    # Simple function to generate String in the form x.x.x Khz for Freq > 99950 Hz
+    def xkhzconvert(value):
+        x = "%3d" % round((value / 1000), 0)
+        print("x=", x)
+        s = ''
+        count = 0
+        for i in x:
+            if count < 2:
+                s = s + i + "."
+            else:
+                s = s + i
+            count = count + 1
+        return s
+
+    def enableSliderFreq(self,drag=False):
+        # Read Values and set the device
+        # Fxxx, Fx.xx, Fxx.x or Fx.x.x
+        if self.usbConnect:
+            myTemp = self.ui.freqSlider.value()
+            if myTemp > 99940:
+                print("x0")
+                myStr = xkhzconvert(myTemp)
+            elif myTemp < 1000:
+                myStr = "%03d" % myTemp
+            elif myTemp < 10000:
+                myStr = "%.2f" % (myTemp / 1000)
+            elif myTemp < 99950:
+                myStr = "%.1f" % (myTemp / 1000)
+            self.writeUsb("F"+myStr)
+            self.sliderDrag = drag
+
+    def enableSliderD1(self,drag=False):
         # Read Values and set the device
         if self.usbConnect:
             myTemp = self.ui.sl_pwm1.value()
             myStr = "D1:{:03d}".format(myTemp)
             self.writeUsb(myStr)
+            #print("Set")
             if self.locked:
                 self.statusBar().showMessage("Setting channels")
                 time.sleep(0.5)
@@ -92,24 +138,24 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 myStr = "D3:{:03d}".format(myTemp)
                 self.writeUsb(myStr)
                 time.sleep(0.5)
-            self.sliderDrag = False
+            self.sliderDrag = drag
 
 
-    def enableSliderD2(self):
+    def enableSliderD2(self,drag=False):
         # Read Values and set the device
         if self.usbConnect:
             myTemp = self.ui.sl_pwm2.value()
             myStr = "D2:{:03d}".format(myTemp)
             self.writeUsb(myStr)
-            self.sliderDrag = False
+            self.sliderDrag = drag
 
-    def enableSliderD3(self):
+    def enableSliderD3(self,drag=False):
         # Read Values and set the device
         if self.usbConnect:
             myTemp = self.ui.sl_pwm3.value()
             myStr = "D3:{:03d}".format(myTemp)
             self.writeUsb(myStr)
-            self.sliderDrag = False
+            self.sliderDrag = drag
 
     def writeUsb(self,value):
         self.serial.write(value.encode())  # set current Value
@@ -117,17 +163,20 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def readUsb(self):
         if self.usbConnect and self.sliderDrag==False:
+            tempFreq = "0"
+            decCounter = 0
             self.serial.write("read".encode())  # read current Values
             self.serial.flush()  # it is buffering. required to get the data out *now*
             readBytes = self.serial.readline().decode(encoding='UTF-8')
-            # print(readBytes)
-            if len(readBytes.split(','))==5:
+            #print("readBytes:",readBytes)
+            # After new frequency setting we receive readBytes: FIII,D1:050,D2:035,D3:015,
+            if len(readBytes.split(','))==5 and not readBytes.split(',')[0] == 'FIII':
                 self.statusBar().showMessage("Ok: Read "+readBytes)
                 m = re.search('F(\d+?\.?\d+?.?\d+),D1:(\d+),D2:(\d+),D3:(\d+)', readBytes.rstrip())
                 tempFreq = m.group(1)
                 decCounter = tempFreq.count('.')
                 freqArray = tempFreq.split(".")
-                print("freqArr ",freqArray)
+                #print("freqArr ",freqArray)
                 if decCounter==0:
                     self.frequency = int(tempFreq)
                     # 1 Hz Control aktiv
@@ -164,7 +213,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
                     self.ui.freqSlider.setPageStep(1000)
                     self.freqDivider = 1000
                 # wenn decCounter = 1 und Array0 > 9 , dann 100er aktive , 11.3 = 11300 Hz , evtl. Darstellung anpassen
-                print("Group1 Freq",tempFreq ," Counter ",decCounter)
+                # print("Group1 Freq",tempFreq ," Counter ",decCounter)
                 self.d1Duty = int(m.group(2))
                 self.d2Duty = int(m.group(3))
                 self.d3Duty = int(m.group(4))
@@ -212,6 +261,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.setSlider(self.ui.sl_pwm3)
 
         self.ui.comboBox.addItems(["/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyUSB2"])
+        # Deactivate setButton
+        self.ui.setButton.setDisabled(True)
     #enddef
 
     def update_freq_sl(self,value):
@@ -344,10 +395,14 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.sl_pwm2.sliderReleased.connect(self.enableSliderD2)
         self.ui.sl_pwm3.sliderPressed.connect(self.stopSlider)
         self.ui.sl_pwm3.sliderReleased.connect(self.enableSliderD3)
-        #self.ui.freqSlider.sliderPressed.connect(self.stopSlider)
-        #self.ui.freqSlider.sliderReleased.connect(self.enableSlider)
+        self.ui.freqSlider.sliderPressed.connect(self.stopSlider)
+        self.ui.freqSlider.sliderReleased.connect(self.enableSliderFreq)
         # Lock when focusIn editLine
+        self.ui.edit_freq.selectionChanged.connect(self.stopEdit)
         self.ui.edit_duty1.selectionChanged.connect(self.stopEdit)
+        self.ui.edit_duty2.selectionChanged.connect(self.stopEdit)
+        self.ui.edit_duty3.selectionChanged.connect(self.stopEdit)
+        self.ui.setButton.clicked.connect(self.setNewValues)
     # enddef
 
     def centerOnScreen (self):
