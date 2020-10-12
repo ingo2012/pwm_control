@@ -1,8 +1,11 @@
 Simple Control-GUI for XY-LPWM PWM 3-Channel Signal Generator. Use a FT232USB to TTL connector to connect
 the PC to the XY_LPMW Board in (3v3 Mode).
 
+URL: http://www.igerlach.de/home.htm
 
 URL: https://github.com/ingo2012/pwm_control
+
+DH1AAD ,Ingo Gerlach , 08.10.2020
 
 ![Screenshot](images/screenshot.png)
 
