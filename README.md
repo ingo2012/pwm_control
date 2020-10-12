@@ -9,7 +9,7 @@ URL: https://github.com/ingo2012/pwm_control
 I use this Board:
 ![Screenshot](images/3channel_pwm.jpg)
 
-## pwm_control install
+## pwm_control install on Ubuntu 18
 
 - sudo apt-get install python3-venv
 - sudo apt update
