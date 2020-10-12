@@ -1,4 +1,5 @@
 Simple Control-GUI for XY-LPWM PWM 3-Channel Signal Generator 
+URL: https://github.com/ingo2012/pwm_control
 
 ![Screenshot](images/screenshot.png)
 
@@ -7,20 +8,18 @@ I use this Board:
 
 ## pwm_control install
 
--https://github.com/ingo2012/pwm_control
+- sudo apt-get install python3-venv
+- sudo apt update
+- sudo apt upgrade 
 
--sudo apt-get install python3-venv
--sudo apt update
--sudo apt upgrade 
+- git clone https://github.com/ingo2012/pwm_control.git pwm_control
+- cd pwm_control
+- python3 -m venv venv
 
--git clone https://github.com/ingo2012/pwm_control.git pwm_control
--cd pwm_control
--python3 -m venv venv
+- source venv/bin/activate
+- pip3 install -r requirements.txt
 
--source venv/bin/activate
--pip3 install -r requirements.txt
-
--python3 main.py
+- python3 main.py
 
 ## Links
 - Great Description of the one Channel Modul : [https://protosupplies.com/product/xy-lpwm-...](https://protosupplies.com/product/xy-lpwm-pwm-signal-generator-module/)
